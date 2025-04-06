@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resumen con LLaMA 4</title>
+</head>
+<body>
+  <h2>Generador de Resúmenes con LLaMA 4</h2>
+  <textarea id="texto" rows="10" cols="60" placeholder="Pega aquí tu texto..."></textarea><br>
+  <button onclick="enviar()">Generar resumen</button>
+  <h3>Resultado:</h3>
+  <pre id="resultado"></pre>
+
+  <script>
+    async function enviar() {
+      const texto = document.getElementById("texto").value;
+      const resultado = document.getElementById("resultado");
+      resultado.innerText = "Procesando...";
+
+      try {
+        const respuesta = await fetch("https://proxy-llama4.macacuervo.repl.co/resumir", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ texto })
+        });
+
+        const datos = await respuesta.json();
+        resultado.innerText = datos.resumen || "Error al obtener resumen";
+      } catch (error) {
+        resultado.innerText = "Error al conectar con el servidor.";
+      }
+    }
+  </script>
+</body>
+</html>
