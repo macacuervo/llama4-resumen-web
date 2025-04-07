@@ -6,8 +6,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import fs from "fs";
-import pdf from "pdf-parse/lib/pdf-parse.js";
-
+import pdf from "pdf-parse";
 
 dotenv.config();
 const app = express();
@@ -20,10 +19,10 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const API_KEY = process.env.API_KEY;
 
-// ✅ Cargar documento técnico al arrancar
+// ✅ Declaración SOLO una vez
 let documentoTecnico = "";
-const rutaReferencia = path.join(__dirname, "biblioteca", "guia-insst.pdf");
-let documentoTecnico = "";
+
+// ✅ Cargar documento técnico
 const rutaReferencia = path.join(__dirname, "biblioteca", "guia-insst.pdf");
 
 async function cargarDocumentoTecnico() {
@@ -31,12 +30,13 @@ async function cargarDocumentoTecnico() {
     const buffer = fs.readFileSync(rutaReferencia);
     const data = await pdf(buffer);
     documentoTecnico = data.text;
-    console.log("Documento técnico cargado correctamente.");
+    console.log("✅ Documento técnico cargado");
   } else {
     console.error("❌ No se encontró guia-insst.pdf en la carpeta biblioteca.");
   }
 }
 await cargarDocumentoTecnico();
+
 
 
 // ✅ Endpoint para resumen tradicional
