@@ -10,22 +10,17 @@
   <button onclick="enviar()">Generar resumen</button>
   <h3>Resultado:</h3>
   <pre id="resultado"></pre>
-
   <script>
     async function enviar() {
       const texto = document.getElementById("texto").value;
       const resultado = document.getElementById("resultado");
       resultado.innerText = "Procesando...";
-
       try {
-        const respuesta = await fetch("https://proxy-llama4.macacuervo.repl.co/resumir", {
+        const respuesta = await fetch("/resumir", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texto })
         });
-
         const datos = await respuesta.json();
         resultado.innerText = datos.resumen || "Error al obtener resumen";
       } catch (error) {
