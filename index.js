@@ -6,7 +6,9 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import fs from "fs";
-import pdf from "pdf-parse";
+import * as pdfParse from "pdf-parse";
+const pdf = pdfParse.default || pdfParse;
+
 
 dotenv.config();
 const app = express();
