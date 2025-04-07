@@ -6,25 +6,56 @@
 </head>
 <body>
   <h2>Generador de Resúmenes con LLaMA 4</h2>
+
   <textarea id="texto" rows="10" cols="60" placeholder="Pega aquí tu texto..."></textarea><br>
+
+  <input type="file" id="pdfInput" accept="application/pdf"><br><br>
+
   <button onclick="enviar()">Generar resumen</button>
+
   <h3>Resultado:</h3>
-  <pre id="resultado"></pre>
+  <pre id="resultado">...</pre>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
   <script>
+    async function leerPDF(archivo) {
+      const arrayBuffer = await archivo.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let texto = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        texto += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      return texto;
+    }
+
     async function enviar() {
-      const texto = document.getElementById("texto").value;
+      const areaTexto = document.getElementById("texto");
       const resultado = document.getElementById("resultado");
+      const archivo = document.getElementById("pdfInput").files[0];
+
       resultado.innerText = "Procesando...";
+
+      let texto = areaTexto.value;
+
+      if (archivo && archivo.type === "application/pdf") {
+        texto = await leerPDF(archivo);
+        areaTexto.value = texto; // lo pega en el textarea también por si se quiere editar
+      }
+
       try {
         const respuesta = await fetch("/resumir", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texto })
         });
+
         const datos = await respuesta.json();
         resultado.innerText = datos.resumen || "Error al obtener resumen";
       } catch (error) {
         resultado.innerText = "Error al conectar con el servidor.";
+        console.error(error);
       }
     }
   </script>
