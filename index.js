@@ -23,10 +23,21 @@ const API_KEY = process.env.API_KEY;
 // ✅ Cargar documento técnico al arrancar
 let documentoTecnico = "";
 const rutaReferencia = path.join(__dirname, "biblioteca", "guia-insst.pdf");
-if (fs.existsSync(rutaReferencia)) {
-  const buffer = fs.readFileSync(rutaReferencia);
-  pdf(buffer).then(data => documentoTecnico = data.text);
+let documentoTecnico = "";
+const rutaReferencia = path.join(__dirname, "biblioteca", "guia-insst.pdf");
+
+async function cargarDocumentoTecnico() {
+  if (fs.existsSync(rutaReferencia)) {
+    const buffer = fs.readFileSync(rutaReferencia);
+    const data = await pdf(buffer);
+    documentoTecnico = data.text;
+    console.log("Documento técnico cargado correctamente.");
+  } else {
+    console.error("❌ No se encontró guia-insst.pdf en la carpeta biblioteca.");
+  }
 }
+await cargarDocumentoTecnico();
+
 
 // ✅ Endpoint para resumen tradicional
 app.post("/resumir", async (req, res) => {
