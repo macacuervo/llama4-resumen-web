@@ -94,7 +94,8 @@
         }
 
         try {
-          const res = await fetch(endpoint, {
+          const res = await fetch("https://llama4-resumen-web.onrender.com" + endpoint, {
+
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ texto })
