@@ -1,117 +1,111 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Asistente de Investigación</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f4f8;
-      padding: 30px;
-      color: #333;
-    }
-
-    .contenedor {
-      max-width: 800px;
-      margin: auto;
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      color: #004080;
-    }
-
-    textarea, input[type="file"] {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      margin-top: 20px;
-      padding: 12px;
-      width: 100%;
-      background-color: #0078d4;
-      color: white;
-      border: none;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #005fa3;
-    }
-
-    #resultado {
-      margin-top: 20px;
-      background: #f5f5f5;
-      padding: 15px;
-      border-radius: 6px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-x: hidden;
-    }
-  </style>
-</head>
-<body>
-  <div class="contenedor">
-    <h2>Asistente de Investigación de Accidentes</h2>
-
-    <input type="file" id="pdfInforme" accept="application/pdf">
-    <button onclick="analizarInforme()">Analizar informe con biblioteca técnica</button>
-
-    <h3>Resultado:</h3>
-    <div id="resultado">Esperando análisis...</div>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-  <script>
-    async function leerPDF(file) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let texto = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        texto += content.items.map(item => item.str).join(" ") + "\\n";
+  <head>
+    <meta charset="UTF-8" />
+    <title>Resumen y Revisión Técnica</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 2rem;
+        background-color: #f2f2f2;
+        max-width: 900px;
+        margin: auto;
       }
-      return texto;
-    }
+      h2 {
+        color: #333;
+      }
+      textarea {
+        width: 100%;
+        height: 200px;
+        resize: vertical;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        font-family: monospace;
+      }
+      input[type="file"] {
+        margin-bottom: 1rem;
+      }
+      button {
+        padding: 0.6rem 1.5rem;
+        background-color: #0078d4;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-right: 1rem;
+        font-weight: bold;
+      }
+      button:hover {
+        background-color: #005fa3;
+      }
+      pre {
+        background: white;
+        padding: 1rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        border: 1px solid #ccc;
+        max-height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>⚙️ Asistente de Revisión de Informes de Accidentes</h2>
 
-    async function analizarInforme() {
-      const archivo = document.getElementById("pdfInforme").files[0];
-      const resultado = document.getElementById("resultado");
+    <textarea id="texto" placeholder="Pega o escribe el contenido del informe..."></textarea>
+    <input type="file" id="pdfInput" accept="application/pdf" />
+    <br />
+    <button onclick="resumir()">✏️ Generar resumen</button>
+    <button onclick="analizar()">⚖️ Revisar técnicamente</button>
 
-      if (!archivo) {
-        resultado.innerText = "⚠️ Por favor, selecciona un PDF.";
-        return;
+    <h3>📝 Resultado:</h3>
+    <pre id="resultado">...</pre>
+
+    <script>
+      async function leerPDF(archivo) {
+        const arrayBuffer = await archivo.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let texto = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          texto += content.items.map((item) => item.str).join(" ") + "\n";
+        }
+        return texto;
       }
 
-      resultado.innerText = "🔄 Analizando informe...";
-
-      const texto = await leerPDF(archivo);
-
-      try {
-        const respuesta = await fetch("/analizar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto })
-        });
-
-        const datos = await respuesta.json();
-        resultado.innerText = datos.revision || "❌ No se recibió respuesta del servidor.";
-      } catch (error) {
-        console.error(error);
-        resultado.innerText = "❌ Error al conectar con el servidor.";
+      async function resumir() {
+        await procesarTexto("/resumir");
       }
-    }
-  </script>
-</body>
+
+      async function analizar() {
+        await procesarTexto("/analizar");
+      }
+
+      async function procesarTexto(endpoint) {
+        const areaTexto = document.getElementById("texto");
+        const archivo = document.getElementById("pdfInput").files[0];
+        const resultado = document.getElementById("resultado");
+        resultado.textContent = "Procesando...";
+
+        let texto = areaTexto.value;
+        if (archivo && archivo.type === "application/pdf") {
+          texto = await leerPDF(archivo);
+        }
+
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texto })
+          });
+          const datos = await res.json();
+          resultado.textContent = datos.resumen || datos.revision || datos.error || "Sin respuesta.";
+        } catch (e) {
+          resultado.textContent = "Error al conectar con el servidor.";
+        }
+      }
+    </script>
+  </body>
 </html>
+
