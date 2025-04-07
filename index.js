@@ -76,8 +76,15 @@ app.post("/resumir", async (req, res) => {
 // ✅ Endpoint para revisión técnica
 app.post("/analizar", async (req, res) => {
   const textoInforme = req.body.texto;
-  if (!textoInforme) return res.status(400).json({ error: "Falta el texto del informe." });
-  if (!documentoTecnico) return res.status(500).json({ error: "No se ha cargado el documento técnico." });
+
+  console.log("📥 Texto recibido para analizar:");
+  console.log(textoInforme.slice(0, 300)); // muestra los primeros caracteres
+  console.log("📚 Documento técnico cargado:", documentoTecnico.length, "caracteres");
+
+  if (!textoInforme || !documentoTecnico) {
+    console.error("❌ Faltan datos para analizar");
+    return res.status(400).json({ error: "Falta texto o referencia técnica." });
+  }
 
   try {
     const respuesta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -92,20 +99,23 @@ app.post("/analizar", async (req, res) => {
           { role: "system", content: "Eres un experto en investigación de accidentes laborales." },
           {
             role: "user",
-            content: `Compara el siguiente informe con el documento técnico y genera un resumen, una revisión de carencias y recomendaciones.\n\nINFORME:\n${textoInforme}\n\nREFERENCIA:\n${documentoTecnico}`
+            content: `Compara el siguiente informe con el documento técnico y genera un resumen, una revisión de carencias y recomendaciones.\n\nINFORME:\n${textoInforme}\n\nREFERENCIA:\n${documentoTecnico.slice(0, 2000)}... [truncado]`
           }
         ]
       })
     });
 
     const datos = await respuesta.json();
+    console.log("🧠 Respuesta IA:", datos);
+
     res.json({ revision: datos.choices?.[0]?.message?.content || "Sin respuesta." });
 
   } catch (error) {
-    console.error("❌ Error en análisis IA:", error.message);
-    res.status(500).json({ error: "Fallo en análisis IA." });
+    console.error("❌ Error en análisis IA:", error);
+    res.status(500).json({ error: "Fallo en análisis IA" });
   }
 });
+
 
 // ✅ Iniciar servidor
 const PORT = process.env.PORT || 3000;
