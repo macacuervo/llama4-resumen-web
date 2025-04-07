@@ -5,12 +5,13 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import fs from "fs";
+import pdf from "pdf-parse";
 
 dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,6 +19,15 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const API_KEY = process.env.API_KEY;
 
+// ✅ Cargar documento técnico al arrancar
+let documentoTecnico = "";
+const rutaReferencia = path.join(__dirname, "biblioteca", "guia-insst.pdf");
+if (fs.existsSync(rutaReferencia)) {
+  const buffer = fs.readFileSync(rutaReferencia);
+  pdf(buffer).then(data => documentoTecnico = data.text);
+}
+
+// ✅ Endpoint para resumen tradicional
 app.post("/resumir", async (req, res) => {
   const texto = req.body.texto;
   try {
@@ -38,10 +48,45 @@ app.post("/resumir", async (req, res) => {
     const datos = await respuesta.json();
     res.json({ resumen: datos.choices?.[0]?.message?.content || "Sin resumen" });
   } catch (error) {
-    console.error("Error en el servidor:", error);
-    res.status(500).json({ error: "Error al generar el resumen." });
+    console.error("Error:", error);
+    res.status(500).json({ error: "Error al generar resumen." });
   }
 });
 
-const PORT = process.env.PORT;
+// ✅ Nuevo endpoint /analizar
+app.post("/analizar", async (req, res) => {
+  const textoInforme = req.body.texto;
+  if (!textoInforme || !documentoTecnico) {
+    return res.status(400).json({ error: "Falta texto o referencia técnica." });
+  }
+
+  try {
+    const respuesta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "mistralai/mistral-7b-instruct",
+        messages: [
+          { role: "system", content: "Eres un experto en investigación de accidentes laborales." },
+          {
+            role: "user",
+            content: `Compara el siguiente informe con el documento técnico y genera un resumen, una revisión de carencias y recomendaciones.\n\nINFORME:\n${textoInforme}\n\nREFERENCIA:\n${documentoTecnico}`
+          }
+        ]
+      })
+    });
+
+    const datos = await respuesta.json();
+    res.json({ revision: datos.choices?.[0]?.message?.content || "Sin respuesta." });
+
+  } catch (error) {
+    console.error("Error en análisis IA:", error);
+    res.status(500).json({ error: "Fallo en análisis IA" });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor en marcha en puerto ${PORT}`));
