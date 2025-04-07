@@ -2,14 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Resumen con LLaMA 4</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <title>Asistente de Investigación</title>
   <style>
     body {
-      font-family: 'Roboto', sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      padding: 30px;
       color: #333;
     }
 
@@ -17,128 +15,103 @@
       max-width: 800px;
       margin: auto;
       background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
 
     h2 {
       color: #004080;
-      text-align: center;
     }
 
-    textarea {
+    textarea, input[type="file"] {
       width: 100%;
-      height: 150px;
+      margin-top: 10px;
       padding: 10px;
-      font-size: 16px;
+      font-size: 14px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      border-radius: 8px;
-      resize: vertical;
-    }
-
-    input[type="file"] {
-      margin-top: 15px;
     }
 
     button {
-      display: block;
-      width: 100%;
       margin-top: 20px;
       padding: 12px;
-      background: #0078d4;
+      width: 100%;
+      background-color: #0078d4;
       color: white;
-      font-size: 16px;
       border: none;
-      border-radius: 8px;
+      font-size: 16px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: background 0.3s ease;
     }
 
     button:hover {
-      background: #005fa3;
-    }
-
-    h3 {
-      margin-top: 30px;
-      color: #004080;
+      background-color: #005fa3;
     }
 
     #resultado {
-      background: #eef2f5;
-      border: 1px solid #ccc;
+      margin-top: 20px;
+      background: #f5f5f5;
       padding: 15px;
-      border-radius: 8px;
+      border-radius: 6px;
       white-space: pre-wrap;
       word-break: break-word;
       overflow-x: hidden;
-      max-height: 400px;
-      overflow-y: auto;
     }
   </style>
 </head>
 <body>
   <div class="contenedor">
-    <h2>🧠 Generador de Resúmenes con LLaMA 4</h2>
+    <h2>Asistente de Investigación de Accidentes</h2>
 
-    <textarea id="texto" placeholder="Pega aquí tu texto..."></textarea>
-    <input type="file" id="pdfInput" accept="application/pdf" />
+    <input type="file" id="pdfInforme" accept="application/pdf">
+    <button onclick="analizarInforme()">Analizar informe con biblioteca técnica</button>
 
-    <button onclick="enviar()">Generar resumen</button>
-
-    <h3>📝 Resultado:</h3>
-    <div id="resultado">...</div>
+    <h3>Resultado:</h3>
+    <div id="resultado">Esperando análisis...</div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
   <script>
-    async function leerPDF(archivo) {
-      const arrayBuffer = await archivo.arrayBuffer();
+    async function leerPDF(file) {
+      const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       let texto = "";
-      const maxPaginas = 100;
-
-      for (let i = 1; i <= Math.min(pdf.numPages, maxPaginas); i++) {
+      for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        texto += content.items.map(item => item.str).join(' ') + '\n';
+        texto += content.items.map(item => item.str).join(" ") + "\\n";
       }
-
       return texto;
     }
 
-    async function enviar() {
-      const areaTexto = document.getElementById("texto");
+    async function analizarInforme() {
+      const archivo = document.getElementById("pdfInforme").files[0];
       const resultado = document.getElementById("resultado");
-      const archivo = document.getElementById("pdfInput").files[0];
-      resultado.innerText = "Procesando...";
 
-      let texto = areaTexto.value;
-
-      if (archivo && archivo.type === "application/pdf") {
-        if (archivo.size > 10 * 1024 * 1024) {
-          resultado.innerText = "⚠️ El archivo supera los 10MB permitidos.";
-          return;
-        }
-        texto = await leerPDF(archivo);
+      if (!archivo) {
+        resultado.innerText = "⚠️ Por favor, selecciona un PDF.";
+        return;
       }
 
+      resultado.innerText = "🔄 Analizando informe...";
+
+      const texto = await leerPDF(archivo);
+
       try {
-        const respuesta = await fetch("/resumir", {
+        const respuesta = await fetch("/analizar", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texto })
         });
 
         const datos = await respuesta.json();
-        resultado.innerText = datos.resumen || "❌ Error: sin resumen.";
+        resultado.innerText = datos.revision || "❌ No se recibió respuesta del servidor.";
       } catch (error) {
+        console.error(error);
         resultado.innerText = "❌ Error al conectar con el servidor.";
       }
     }
   </script>
 </body>
 </html>
-
