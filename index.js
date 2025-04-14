@@ -123,7 +123,7 @@ app.post("/analizar", async (req, res) => {
         respuestasIA.push(`🔹 Bloque ${i + 1}:\n${revision.trim()}`);
       }
 
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 300));
     }
 
     const resultadoFinal = respuestasIA.length
