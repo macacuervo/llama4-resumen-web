@@ -12,7 +12,7 @@ import pdf from "pdf-parse/lib/pdf-parse.js";
 dotenv.config();
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "15mb" }));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -88,7 +88,7 @@ app.post("/analizar", async (req, res) => {
     return res.status(400).json({ error: "Falta texto o referencia técnica." });
   }
 
-  const bloquesReferencia = dividirTextoEnBloques(documentoTecnico, 1000);
+  const bloquesReferencia = dividirTextoEnBloques(documentoTecnico, 3000);
   const respuestasIA = [];
 
   try {
