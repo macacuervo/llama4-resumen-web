@@ -45,7 +45,7 @@
         white-space: pre-wrap;
         word-wrap: break-word;
         border: 1px solid #ccc;
-        max-height: 400px;
+        max-height: 600px;
       }
     </style>
   </head>
@@ -94,8 +94,7 @@
         }
 
         try {
-          const res = await fetch("https://llama4-resumen-web.onrender.com" + endpoint, {
-
+          const res = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ texto })
