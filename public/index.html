@@ -2,82 +2,155 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Asistente de Revisión</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Asistente de Revisión de Informes de Accidentes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f7f9fb;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-family: monospace;
+      font-size: 1rem;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+    input[type="file"] {
+      margin-bottom: 1rem;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 0.7rem 1rem;
+      font-size: 1rem;
+      margin-right: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .resultado {
+      margin-top: 2rem;
+      background: #f0f0f0;
+      padding: 1rem;
+      border-radius: 6px;
+      white-space: pre-wrap;
+    }
+    .spinner {
+      display: none;
+      margin-top: 1rem;
+      font-style: italic;
+      color: #555;
+    }
+    .icono {
+      font-size: 1.2rem;
+    }
+  </style>
 </head>
-<body style="font-family: 'Segoe UI', sans-serif; background: #f4f6f8; margin: 0; padding: 2rem;">
-  <div style="max-width: 900px; margin: auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-    <h2>🛠️ Asistente de Revisión de Informes de Accidentes</h2>
-
-    <textarea id="texto" rows="8" placeholder="Pega o escribe el contenido del informe..." style="width: 100%; padding: 1rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid #ccc; font-family: monospace;"></textarea>
-
-    <input type="file" id="archivo" accept=".pdf" />
-    <br /><br />
-    <button id="btnResumen" style="padding: 0.5rem 1rem; margin-right: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">✏️ Generar resumen</button>
-    <button id="btnRevisar" style="padding: 0.5rem 1rem; background-color: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer;">🧐 Revisar técnicamente</button>
-
-    <div id="resultado" style="margin-top: 1.5rem; background: #f9f9f9; border-left: 5px solid #007bff; padding: 1rem; border-radius: 5px;">
-      <strong>📂 Resultado:</strong>
-      <div id="resultadoContenido" style="margin-top: 0.5rem;"></div>
-    </div>
+<body>
+  <div class="container">
+    <h1>🛠️ Asistente de Revisión de Informes de Accidentes</h1>
+    <textarea id="inputTexto" placeholder="Pega o escribe el contenido del informe..."></textarea>
+    <br />
+    <input type="file" id="fileInput" />
+    <br />
+    <button onclick="generarResumen()">
+      ✏️ Generar resumen
+    </button>
+    <button onclick="revisarTecnicamente()">
+      🛡️ Revisar técnicamente
+    </button>
+    <div id="spinner" class="spinner">⏳ Procesando... por favor espera.</div>
+    <div class="resultado" id="resultado"></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
   <script>
-    const btnResumen = document.getElementById("btnResumen");
-    const btnRevisar = document.getElementById("btnRevisar");
-    const archivo = document.getElementById("archivo");
-    const resultado = document.getElementById("resultadoContenido");
+    const fileInput = document.getElementById("fileInput");
+    const inputTexto = document.getElementById("inputTexto");
+    const resultado = document.getElementById("resultado");
+    const spinner = document.getElementById("spinner");
 
-    function mostrarCargando(mensaje) {
-      resultado.innerHTML = `<p style="font-style: italic; color: gray;">${mensaje}</p>`;
-    }
-
-    async function obtenerTexto() {
-      const texto = document.getElementById("texto").value.trim();
-      if (texto) return texto;
-      if (!archivo.files.length) return "";
-
-      const pdf = archivo.files[0];
-      const arrayBuffer = await pdf.arrayBuffer();
-      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let textoCompleto = "";
-
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const content = await page.getTextContent();
-        textoCompleto += content.items.map(i => i.str).join(" ") + "\n";
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (file && file.type === "application/pdf") {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const typedArray = new Uint8Array(reader.result);
+          const pdf = await pdfjsLib.getDocument(typedArray).promise;
+          let text = "";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(" ") + "\n";
+          }
+          inputTexto.value = text;
+        };
+        reader.readAsArrayBuffer(file);
       }
-      return textoCompleto;
+    });
+
+    async function generarResumen() {
+      await enviarTexto("/resumir");
     }
 
-    btnResumen.addEventListener("click", async () => {
-      const texto = await obtenerTexto();
-      if (!texto) return alert("Falta contenido.");
-      mostrarCargando("✏️ Generando resumen...");
+    async function revisarTecnicamente() {
+      await enviarTexto("/analizar");
+    }
 
-      const respuesta = await fetch("/resumir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto }),
-      });
-      const datos = await respuesta.json();
-      resultado.innerHTML = `<pre>${datos.resumen}</pre>`;
-    });
+    async function enviarTexto(endpoint) {
+      const texto = inputTexto.value.trim();
+      if (!texto) return alert("Introduce texto o selecciona un archivo PDF.");
 
-    btnRevisar.addEventListener("click", async () => {
-      const texto = await obtenerTexto();
-      if (!texto) return alert("Falta contenido.");
-      mostrarCargando("🔄 Revisando técnicamente el informe...");
+      spinner.style.display = "block";
+      resultado.innerText = "";
 
-      const respuesta = await fetch("/analizar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto }),
-      });
-      const datos = await respuesta.json();
-      resultado.innerHTML = `<pre>${datos.revision}</pre>`;
-    });
+      try {
+        const respuesta = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texto })
+        });
+        const datos = await respuesta.json();
+        resultado.innerText = datos.resumen || datos.revision || "No se obtuvo respuesta.";
+      } catch (error) {
+        resultado.innerText = "❌ Error al procesar la petición.";
+        console.error(error);
+      } finally {
+        spinner.style.display = "none";
+      }
+    }
+
+    // Cargar PDF.js
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js";
+    document.head.appendChild(script);
   </script>
 </body>
 </html>
