@@ -1,3 +1,4 @@
+// ✅ server.js actualizado
 import express from "express";
 import cors from "cors";
 import { fetch } from "undici";
@@ -7,7 +8,6 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import fs from "fs";
 import pdf from "pdf-parse/lib/pdf-parse.js";
-
 
 dotenv.config();
 const app = express();
@@ -19,9 +19,16 @@ const __dirname = dirname(__filename);
 app.use(express.static(path.join(__dirname, "public")));
 
 const API_KEY = process.env.API_KEY;
-
-// ✅ Declarar la variable una sola vez
 let documentoTecnico = "";
+
+// ✅ Función para dividir la guía en bloques
+function dividirTextoEnBloques(texto, tamanyo = 1000) {
+  const bloques = [];
+  for (let i = 0; i < texto.length; i += tamanyo) {
+    bloques.push(texto.slice(i, i + tamanyo));
+  }
+  return bloques;
+}
 
 // ✅ Cargar documento técnico desde archivo PDF si existe
 async function cargarDocumentoTecnico() {
@@ -40,10 +47,7 @@ async function cargarDocumentoTecnico() {
   }
 }
 
-// ✅ Llamar a la función de carga
 await cargarDocumentoTecnico();
-
-// ================== ENDPOINTS ===================
 
 // ✅ Endpoint para generar resumen
 app.post("/resumir", async (req, res) => {
@@ -73,42 +77,60 @@ app.post("/resumir", async (req, res) => {
   }
 });
 
-// ✅ Endpoint para revisión técnica
+// ✅ Endpoint mejorado para revisión técnica por bloques
 app.post("/analizar", async (req, res) => {
   const textoInforme = req.body.texto;
 
   console.log("📥 Texto recibido para analizar:");
-  console.log(textoInforme.slice(0, 300)); // muestra los primeros caracteres
-  console.log("📚 Documento técnico cargado:", documentoTecnico.length, "caracteres");
+  console.log(textoInforme.slice(0, 300));
 
   if (!textoInforme || !documentoTecnico) {
-    console.error("❌ Faltan datos para analizar");
     return res.status(400).json({ error: "Falta texto o referencia técnica." });
   }
 
+  const bloquesReferencia = dividirTextoEnBloques(documentoTecnico, 1000);
+  const respuestasIA = [];
+
   try {
-    const respuesta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct",
-        messages: [
-          { role: "system", content: "Eres un experto en investigación de accidentes laborales." },
-          {
-            role: "user",
-            content: `Compara el siguiente informe con el documento técnico y genera un resumen, una revisión de carencias y recomendaciones.\n\nINFORME:\n${textoInforme}\n\nREFERENCIA:\n${documentoTecnico.slice(0, 2000)}... [truncado]`
-          }
-        ]
-      })
-    });
+    for (let i = 0; i < bloquesReferencia.length; i++) {
+      const bloque = bloquesReferencia[i];
 
-    const datos = await respuesta.json();
-    console.log("🧠 Respuesta IA:", datos);
+      const respuesta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "mistralai/mistral-7b-instruct",
+          messages: [
+            {
+              role: "system",
+              content: "Eres un experto en investigación de accidentes laborales. Tu tarea es identificar omisiones en los informes técnicos en función de una guía normativa."
+            },
+            {
+              role: "user",
+              content: `Lee el siguiente bloque del documento de referencia y analiza si el siguiente informe omite alguna referencia o recomendación importante. Si encuentras omisiones, indícalas con la justificación y cita textual del bloque de referencia.\n\nINFORME:\n${textoInforme}\n\nDOCUMENTO DE REFERENCIA (BLOQUE ${i + 1}):\n${bloque}`
+            }
+          ]
+        })
+      });
 
-    res.json({ revision: datos.choices?.[0]?.message?.content || "Sin respuesta." });
+      const datos = await respuesta.json();
+      const revision = datos.choices?.[0]?.message?.content;
+
+      if (revision && !revision.toLowerCase().includes("no se detectan omisiones")) {
+        respuestasIA.push(`🔹 Bloque ${i + 1}:\n${revision.trim()}`);
+      }
+
+      await new Promise((r) => setTimeout(r, 800));
+    }
+
+    const resultadoFinal = respuestasIA.length
+      ? respuestasIA.join("\n\n")
+      : "✅ No se detectan omisiones relevantes según el análisis por bloques.";
+
+    res.json({ revision: resultadoFinal });
 
   } catch (error) {
     console.error("❌ Error en análisis IA:", error);
@@ -116,12 +138,8 @@ app.post("/analizar", async (req, res) => {
   }
 });
 
-
-// ✅ Iniciar servidor
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Servidor en marcha en puerto ${PORT}`);
   console.log(`Documento técnico cargado: ${documentoTecnico.length > 0 ? "✅" : "❌ NO CARGADO"}`);
 });
-
-
