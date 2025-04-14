@@ -88,7 +88,8 @@ app.post("/analizar", async (req, res) => {
     return res.status(400).json({ error: "Falta texto o referencia técnica." });
   }
 
-  const bloquesReferencia = dividirTextoEnBloques(documentoTecnico, 3000);
+  const bloquesReferencia = dividirTextoEnBloques(documentoTecnico, 3000).slice(0, 1); // solo el primer bloque
+
   const respuestasIA = [];
 
   try {
