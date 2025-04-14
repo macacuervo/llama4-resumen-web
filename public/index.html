@@ -3,121 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Asistente de Revisión de Informes</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f0f2f5;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 900px;
-      margin: 40px auto;
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    h2 {
-      margin-top: 0;
-      color: #333;
-    }
-    textarea {
-      width: 100%;
-      height: 150px;
-      margin-bottom: 10px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-right: 10px;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .resultado {
-      margin-top: 20px;
-    }
-    pre {
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-      padding: 15px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border-radius: 6px;
-    }
-    .file-input {
-      margin: 10px 0;
-    }
-  </style>
+  <title>Asistente de Revisión</title>
 </head>
-<body>
-  <div class="container">
+<body style="font-family: 'Segoe UI', sans-serif; background: #f4f6f8; margin: 0; padding: 2rem;">
+  <div style="max-width: 900px; margin: auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
     <h2>🛠️ Asistente de Revisión de Informes de Accidentes</h2>
-    <textarea id="texto" placeholder="Pega o escribe el contenido del informe..."></textarea>
-    <div class="file-input">
-      <input type="file" id="archivo" accept="application/pdf">
-    </div>
-    <button onclick="resumir()">📝 Generar resumen</button>
-    <button onclick="analizar()">🕵️ Revisar técnicamente</button>
-    <div class="resultado">
-      <h3>📂 Resultado:</h3>
-      <div id="resultado"></div>
+
+    <textarea id="texto" rows="8" placeholder="Pega o escribe el contenido del informe..." style="width: 100%; padding: 1rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+
+    <input type="file" id="archivo" accept=".pdf" />
+    <br /><br />
+    <button id="btnResumen" style="padding: 0.5rem 1rem; margin-right: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">✏️ Generar resumen</button>
+    <button id="btnRevisar" style="padding: 0.5rem 1rem; background-color: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer;">🧐 Revisar técnicamente</button>
+
+    <div id="resultado" style="margin-top: 1.5rem; background: #f9f9f9; border-left: 5px solid #007bff; padding: 1rem; border-radius: 5px;">
+      <strong>📂 Resultado:</strong>
+      <div id="resultadoContenido" style="margin-top: 0.5rem;"></div>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
   <script>
-    const textarea = document.getElementById("texto");
-    const input = document.getElementById("archivo");
+    const btnResumen = document.getElementById("btnResumen");
+    const btnRevisar = document.getElementById("btnRevisar");
+    const archivo = document.getElementById("archivo");
+    const resultado = document.getElementById("resultadoContenido");
 
-    input.addEventListener("change", async () => {
-      const file = input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const typedarray = new Uint8Array(reader.result);
-        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-        let text = "";
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const strings = content.items.map((item) => item.str);
-          text += strings.join(" ") + "\n";
-        }
-        textarea.value = text;
-      };
-      reader.readAsArrayBuffer(file);
+    function mostrarCargando(mensaje) {
+      resultado.innerHTML = `<p style="font-style: italic; color: gray;">${mensaje}</p>`;
+    }
+
+    async function obtenerTexto() {
+      const texto = document.getElementById("texto").value.trim();
+      if (texto) return texto;
+      if (!archivo.files.length) return "";
+
+      const pdf = archivo.files[0];
+      const arrayBuffer = await pdf.arrayBuffer();
+      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let textoCompleto = "";
+
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const content = await page.getTextContent();
+        textoCompleto += content.items.map(i => i.str).join(" ") + "\n";
+      }
+      return textoCompleto;
+    }
+
+    btnResumen.addEventListener("click", async () => {
+      const texto = await obtenerTexto();
+      if (!texto) return alert("Falta contenido.");
+      mostrarCargando("✏️ Generando resumen...");
+
+      const respuesta = await fetch("/resumir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto }),
+      });
+      const datos = await respuesta.json();
+      resultado.innerHTML = `<pre>${datos.resumen}</pre>`;
     });
 
-    async function resumir() {
-      const res = await fetch("/resumir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto: textarea.value })
-      });
-      const data = await res.json();
-      document.getElementById("resultado").innerHTML = `<pre>${data.resumen}</pre>`;
-    }
+    btnRevisar.addEventListener("click", async () => {
+      const texto = await obtenerTexto();
+      if (!texto) return alert("Falta contenido.");
+      mostrarCargando("🔄 Revisando técnicamente el informe...");
 
-    async function analizar() {
-      const res = await fetch("/analizar", {
+      const respuesta = await fetch("/analizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto: textarea.value })
+        body: JSON.stringify({ texto }),
       });
-      const data = await res.json();
-      document.getElementById("resultado").innerHTML = data.revision;
-    }
+      const datos = await respuesta.json();
+      resultado.innerHTML = `<pre>${datos.revision}</pre>`;
+    });
   </script>
 </body>
 </html>
