@@ -3,154 +3,427 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Asistente de Revisión de Informes de Accidentes</title>
+  <title>Juego Comecocos</title>
   <style>
+    :root {
+      color-scheme: light;
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Trebuchet MS", Arial, sans-serif;
       margin: 0;
-      padding: 2rem;
-      background: #f7f9fb;
-    }
-    .container {
-      max-width: 900px;
-      margin: auto;
-      background: white;
-      padding: 2rem;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h1 {
-      font-size: 1.6rem;
+      min-height: 100vh;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1a1f3c 0%, #0b0f1f 60%, #05070f 100%);
+      color: #f5f7ff;
+      padding: 2rem;
     }
-    textarea {
+    .game-shell {
+      width: min(900px, 100%);
+      background: rgba(8, 12, 30, 0.92);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: grid;
+      gap: 1.5rem;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header p {
+      margin: 0;
+      opacity: 0.8;
+    }
+    .stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .stat {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .game-area {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    canvas {
       width: 100%;
-      height: 200px;
-      font-family: monospace;
-      font-size: 1rem;
-      padding: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      resize: vertical;
-      margin-bottom: 1rem;
+      max-width: 520px;
+      aspect-ratio: 1 / 1;
+      background: #05070f;
+      border-radius: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.08);
+      display: block;
     }
-    input[type="file"] {
-      margin-bottom: 1rem;
+    .panel {
+      display: grid;
+      gap: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1.2rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .panel h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #ffe480;
+    }
+    .panel ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      line-height: 1.6;
+      opacity: 0.85;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
     }
     button {
-      background-color: #007bff;
-      color: white;
       border: none;
-      padding: 0.7rem 1rem;
-      font-size: 1rem;
-      margin-right: 1rem;
-      border-radius: 6px;
+      border-radius: 999px;
+      padding: 0.65rem 1.3rem;
+      font-weight: 600;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
+      background: #ffe480;
+      color: #1b1f33;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    button.secondary {
+      background: transparent;
+      color: #ffe480;
+      border: 1px solid rgba(255, 228, 128, 0.6);
     }
     button:hover {
-      background-color: #0056b3;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(255, 228, 128, 0.25);
     }
-    .resultado {
-      margin-top: 2rem;
-      background: #f0f0f0;
-      padding: 1rem;
-      border-radius: 6px;
-      white-space: pre-wrap;
+    .status {
+      font-weight: 600;
+      color: #9ae6ff;
     }
-    .spinner {
-      display: none;
-      margin-top: 1rem;
-      font-style: italic;
-      color: #555;
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      opacity: 0.75;
     }
-    .icono {
-      font-size: 1.2rem;
+    @media (max-width: 820px) {
+      .game-area {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🛠️ Asistente de Revisión de Informes de Accidentes</h1>
-    <textarea id="inputTexto" placeholder="Pega o escribe el contenido del informe..."></textarea>
-    <br />
-    <input type="file" id="fileInput" />
-    <br />
-    <button onclick="generarResumen()">
-      ✏️ Generar resumen
-    </button>
-    <button onclick="revisarTecnicamente()">
-      🛡️ Revisar técnicamente
-    </button>
-    <div id="spinner" class="spinner">⏳ Procesando... por favor espera.</div>
-    <div class="resultado" id="resultado"></div>
-  </div>
+  <main class="game-shell">
+    <header>
+      <div>
+        <h1>🟡 Juego Comecocos</h1>
+        <p>Come todos los puntos y evita el bloqueo de paredes.</p>
+      </div>
+      <div class="stats">
+        <div class="stat" id="score">Puntuación: 0</div>
+        <div class="stat" id="pellets">Bolitas restantes: 0</div>
+        <div class="stat" id="level">Nivel: 1</div>
+      </div>
+    </header>
+
+    <section class="game-area">
+      <canvas id="game" width="520" height="520" aria-label="Tablero del juego"></canvas>
+      <aside class="panel">
+        <div>
+          <h2>Controles</h2>
+          <ul>
+            <li>Usa las flechas o WASD para mover a Comecocos.</li>
+            <li>Come las bolitas para sumar puntos.</li>
+            <li>Recoge las súper bolitas para abrir rutas ocultas.</li>
+          </ul>
+        </div>
+        <div class="controls">
+          <button id="start">Iniciar partida</button>
+          <button id="reset" class="secondary">Reiniciar</button>
+        </div>
+        <div class="status" id="status">Pulsa iniciar para jugar.</div>
+        <div class="legend">
+          <span>🟡 Comecocos</span>
+          <span>⚪ Bolita</span>
+          <span>🔵 Pared</span>
+          <span>✨ Súper bolita</span>
+        </div>
+      </aside>
+    </section>
+  </main>
 
   <script>
-    const fileInput = document.getElementById("fileInput");
-    const inputTexto = document.getElementById("inputTexto");
-    const resultado = document.getElementById("resultado");
-    const spinner = document.getElementById("spinner");
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
 
-    fileInput.addEventListener("change", async () => {
-      const file = fileInput.files[0];
-      if (file && file.type === "application/pdf") {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const typedArray = new Uint8Array(reader.result);
-          const pdf = await pdfjsLib.getDocument(typedArray).promise;
-          let text = "";
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            text += content.items.map(item => item.str).join(" ") + "\n";
+    const scoreEl = document.getElementById("score");
+    const pelletsEl = document.getElementById("pellets");
+    const levelEl = document.getElementById("level");
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("start");
+    const resetBtn = document.getElementById("reset");
+
+    const cellSize = 40;
+    const map = [
+      "1111111111111",
+      "1000000000001",
+      "1011110111101",
+      "1020010002001",
+      "1010111110101",
+      "1000100000101",
+      "1110101110101",
+      "1000001000001",
+      "1011101011101",
+      "1000100000101",
+      "1020111110201",
+      "1000000000001",
+      "1111111111111"
+    ];
+
+    const tile = {
+      wall: "1",
+      pellet: "0",
+      power: "2"
+    };
+
+    let pellets = [];
+    let powerPellets = [];
+    let player = { x: 1, y: 1, dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 } };
+    let score = 0;
+    let remaining = 0;
+    let running = false;
+    let animationId = null;
+    let level = 1;
+    let openSecret = false;
+
+    function buildPellets() {
+      pellets = [];
+      powerPellets = [];
+      map.forEach((row, y) => {
+        row.split("").forEach((cell, x) => {
+          if (cell === tile.pellet) {
+            pellets.push({ x, y, eaten: false });
           }
-          inputTexto.value = text;
-        };
-        reader.readAsArrayBuffer(file);
+          if (cell === tile.power) {
+            powerPellets.push({ x, y, eaten: false });
+          }
+        });
+      });
+      remaining = pellets.length + powerPellets.length;
+      pelletsEl.textContent = `Bolitas restantes: ${remaining}`;
+    }
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      map.forEach((row, y) => {
+        row.split("").forEach((cell, x) => {
+          if (cell === tile.wall || (openSecret === false && cell === tile.power && (x === 2 || x === 10))) {
+            ctx.fillStyle = "#1f4cff";
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        });
+      });
+
+      pellets.forEach((pellet) => {
+        if (pellet.eaten) return;
+        ctx.fillStyle = "#f5f7ff";
+        ctx.beginPath();
+        ctx.arc(
+          pellet.x * cellSize + cellSize / 2,
+          pellet.y * cellSize + cellSize / 2,
+          5,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
+
+      powerPellets.forEach((pellet) => {
+        if (pellet.eaten) return;
+        ctx.fillStyle = "#ffe480";
+        ctx.beginPath();
+        ctx.arc(
+          pellet.x * cellSize + cellSize / 2,
+          pellet.y * cellSize + cellSize / 2,
+          10,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
+    }
+
+    function drawPlayer() {
+      const mouthOpen = (Date.now() / 120) % 2 > 1 ? 0.2 : 0.05;
+      const angle = Math.atan2(player.dir.y, player.dir.x);
+      ctx.fillStyle = "#ffe480";
+      ctx.beginPath();
+      ctx.moveTo(player.x * cellSize + cellSize / 2, player.y * cellSize + cellSize / 2);
+      ctx.arc(
+        player.x * cellSize + cellSize / 2,
+        player.y * cellSize + cellSize / 2,
+        cellSize / 2 - 4,
+        angle + mouthOpen,
+        angle + Math.PI * 2 - mouthOpen
+      );
+      ctx.fill();
+    }
+
+    function isWall(x, y) {
+      const row = map[y];
+      if (!row) return true;
+      const cell = row[x];
+      if (cell === tile.wall) return true;
+      if (cell === tile.power && !openSecret && (x === 2 || x === 10)) return true;
+      return false;
+    }
+
+    function updatePlayer() {
+      if (canMove(player.nextDir)) {
+        player.dir = { ...player.nextDir };
+      }
+
+      const nextX = player.x + player.dir.x;
+      const nextY = player.y + player.dir.y;
+
+      if (!isWall(nextX, nextY)) {
+        player.x = nextX;
+        player.y = nextY;
+        handleCollect();
+      }
+    }
+
+    function canMove(direction) {
+      return !isWall(player.x + direction.x, player.y + direction.y);
+    }
+
+    function handleCollect() {
+      pellets.forEach((pellet) => {
+        if (!pellet.eaten && pellet.x === player.x && pellet.y === player.y) {
+          pellet.eaten = true;
+          score += 10;
+          remaining -= 1;
+        }
+      });
+
+      powerPellets.forEach((pellet) => {
+        if (!pellet.eaten && pellet.x === player.x && pellet.y === player.y) {
+          pellet.eaten = true;
+          score += 50;
+          remaining -= 1;
+          openSecret = true;
+          setTimeout(() => {
+            openSecret = false;
+          }, 4000);
+        }
+      });
+
+      scoreEl.textContent = `Puntuación: ${score}`;
+      pelletsEl.textContent = `Bolitas restantes: ${remaining}`;
+
+      if (remaining <= 0) {
+        level += 1;
+        levelEl.textContent = `Nivel: ${level}`;
+        statusEl.textContent = "¡Nivel completado! Nuevo laberinto.";
+        resetBoard({ keepScore: true, keepLevel: true });
+      }
+    }
+
+    function gameLoop() {
+      if (!running) return;
+      drawBoard();
+      updatePlayer();
+      drawPlayer();
+      animationId = requestAnimationFrame(gameLoop);
+    }
+
+    function resetBoard({ keepScore = false, keepLevel = false } = {}) {
+      player = { x: 1, y: 1, dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 } };
+      score = keepScore ? score : 0;
+      remaining = 0;
+      level = keepLevel ? level : 1;
+      openSecret = false;
+      scoreEl.textContent = `Puntuación: ${score}`;
+      levelEl.textContent = `Nivel: ${level}`;
+      statusEl.textContent = "¡Listo!";
+      buildPellets();
+      drawBoard();
+      drawPlayer();
+    }
+
+    function startGame() {
+      if (running) return;
+      running = true;
+      statusEl.textContent = "¡A jugar!";
+      gameLoop();
+    }
+
+    function stopGame() {
+      running = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    }
+
+    window.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      if ([" ", "enter"].includes(key)) {
+        startGame();
+        return;
+      }
+      if (["arrowup", "w"].includes(key)) {
+        player.nextDir = { x: 0, y: -1 };
+      }
+      if (["arrowdown", "s"].includes(key)) {
+        player.nextDir = { x: 0, y: 1 };
+      }
+      if (["arrowleft", "a"].includes(key)) {
+        player.nextDir = { x: -1, y: 0 };
+      }
+      if (["arrowright", "d"].includes(key)) {
+        player.nextDir = { x: 1, y: 0 };
       }
     });
 
-    async function generarResumen() {
-      await enviarTexto("/resumir");
-    }
-
-    async function revisarTecnicamente() {
-      await enviarTexto("/analizar");
-    }
-
-    async function enviarTexto(endpoint) {
-      const texto = inputTexto.value.trim();
-      if (!texto) return alert("Introduce texto o selecciona un archivo PDF.");
-
-      spinner.style.display = "block";
-      resultado.innerText = "";
-
-      try {
-        const respuesta = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto })
-        });
-        const datos = await respuesta.json();
-        resultado.innerText = datos.resumen || datos.revision || "No se obtuvo respuesta.";
-      } catch (error) {
-        resultado.innerText = "❌ Error al procesar la petición.";
-        console.error(error);
-      } finally {
-        spinner.style.display = "none";
+    startBtn.addEventListener("click", () => {
+      if (!running) {
+        startGame();
       }
-    }
+    });
 
-    // Cargar PDF.js
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js";
-    document.head.appendChild(script);
+    resetBtn.addEventListener("click", () => {
+      stopGame();
+      resetBoard();
+    });
+
+    resetBoard();
+    startGame();
   </script>
 </body>
 </html>
