@@ -351,7 +351,7 @@
         level += 1;
         levelEl.textContent = `Nivel: ${level}`;
         statusEl.textContent = "¡Nivel completado! Nuevo laberinto.";
-        resetBoard();
+        resetBoard({ keepScore: true, keepLevel: true });
       }
     }
 
@@ -363,15 +363,15 @@
       animationId = requestAnimationFrame(gameLoop);
     }
 
-    function resetBoard() {
+    function resetBoard({ keepScore = false, keepLevel = false } = {}) {
       player = { x: 1, y: 1, dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 } };
-      score = 0;
+      score = keepScore ? score : 0;
       remaining = 0;
-      level = 1;
+      level = keepLevel ? level : 1;
       openSecret = false;
-      scoreEl.textContent = "Puntuación: 0";
-      levelEl.textContent = "Nivel: 1";
-      statusEl.textContent = "Pulsa iniciar para jugar.";
+      scoreEl.textContent = `Puntuación: ${score}`;
+      levelEl.textContent = `Nivel: ${level}`;
+      statusEl.textContent = "¡Listo!";
       buildPellets();
       drawBoard();
       drawPlayer();
@@ -393,6 +393,10 @@
 
     window.addEventListener("keydown", (event) => {
       const key = event.key.toLowerCase();
+      if ([" ", "enter"].includes(key)) {
+        startGame();
+        return;
+      }
       if (["arrowup", "w"].includes(key)) {
         player.nextDir = { x: 0, y: -1 };
       }
@@ -418,9 +422,8 @@
       resetBoard();
     });
 
-    buildPellets();
-    drawBoard();
-    drawPlayer();
+    resetBoard();
+    startGame();
   </script>
 </body>
 </html>
